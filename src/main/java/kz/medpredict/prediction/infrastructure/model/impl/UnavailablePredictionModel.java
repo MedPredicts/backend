@@ -1,10 +1,10 @@
-package kz.medpredict.prediction.model.impl;
+package kz.medpredict.prediction.infrastructure.model.impl;
 
 import java.util.Map;
 import kz.medpredict.core.exception.ModelUnavailableException;
-import kz.medpredict.prediction.model.PredictionModel;
-import kz.medpredict.prediction.model.dto.ModelInfo;
-import kz.medpredict.prediction.model.dto.Prediction;
+import kz.medpredict.prediction.infrastructure.model.PredictionModel;
+import kz.medpredict.prediction.model.dto.PredictionModelInfoResponse;
+import kz.medpredict.prediction.model.dto.PredictionResultResponse;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
@@ -12,12 +12,13 @@ import org.springframework.stereotype.Component;
 @Profile("!demo")
 public class UnavailablePredictionModel implements PredictionModel {
     @Override
-    public ModelInfo info() {
+    public PredictionModelInfoResponse info() {
         throw new ModelUnavailableException();
     }
 
     @Override
-    public Prediction predict(Map<String, Object> input) {
+    public PredictionResultResponse predict(Map<String, Object> input) {
         throw new ModelUnavailableException();
     }
 }
+

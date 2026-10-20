@@ -1,10 +1,10 @@
 package kz.medpredict.prediction.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import kz.medpredict.prediction.model.dto.ModelInfo;
-import kz.medpredict.prediction.model.dto.Prediction;
+import kz.medpredict.prediction.model.dto.PredictionModelInfoResponse;
+import kz.medpredict.prediction.model.dto.PredictionResultResponse;
 
 public interface PredictionService {
-    ModelInfo modelInfo();
-    Prediction predict(JsonNode body);
+    PredictionModelInfoResponse modelInfo();
+    PredictionResultResponse predict(JsonNode body);
 }

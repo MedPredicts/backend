@@ -4,8 +4,8 @@ import kz.medpredict.core.exception.InputValidationException;
 import kz.medpredict.core.exception.InvalidModelResponseException;
 import kz.medpredict.core.exception.InvalidRequestException;
 import kz.medpredict.core.exception.ModelUnavailableException;
-import kz.medpredict.core.exception.dto.ErrorResponse;
-import kz.medpredict.core.exception.dto.ValidationErrorResponse;
+import kz.medpredict.core.exception.dto.ApiErrorResponse;
+import kz.medpredict.core.exception.dto.ApiValidationErrorResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -16,29 +16,29 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(InputValidationException.class)
-    ResponseEntity<ValidationErrorResponse> validation(InputValidationException exception) {
+    ResponseEntity<ApiValidationErrorResponse> validation(InputValidationException exception) {
         return ResponseEntity.badRequest().body(
-                new ValidationErrorResponse("VALIDATION_ERROR", exception.fields()));
+                new ApiValidationErrorResponse("VALIDATION_ERROR", exception.getFields()));
     }
 
     @ExceptionHandler({InvalidRequestException.class, HttpMessageNotReadableException.class})
-    ResponseEntity<ErrorResponse> malformed() {
-        return ResponseEntity.badRequest().body(new ErrorResponse("INVALID_REQUEST",
+    ResponseEntity<ApiErrorResponse> malformed() {
+        return ResponseEntity.badRequest().body(new ApiErrorResponse("INVALID_REQUEST",
                 "Expected a JSON object with supported fields and valid values."));
     }
 
     @ExceptionHandler(ModelUnavailableException.class)
-    ResponseEntity<ErrorResponse> unavailable() {
+    ResponseEntity<ApiErrorResponse> unavailable() {
         return unavailableResponse("No trained model is configured.");
     }
 
     @ExceptionHandler(InvalidModelResponseException.class)
-    ResponseEntity<ErrorResponse> invalidModel() {
+    ResponseEntity<ApiErrorResponse> invalidModel() {
         return unavailableResponse("The model cannot produce a valid response.");
     }
 
-    private ResponseEntity<ErrorResponse> unavailableResponse(String message) {
+    private ResponseEntity<ApiErrorResponse> unavailableResponse(String message) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(new ErrorResponse("MODEL_UNAVAILABLE", message));
+                .body(new ApiErrorResponse("MODEL_UNAVAILABLE", message));
     }
 }

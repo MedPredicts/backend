@@ -11,30 +11,30 @@ import java.util.stream.Collectors;
 import kz.medpredict.core.exception.InputValidationException;
 import kz.medpredict.core.exception.InvalidModelResponseException;
 import kz.medpredict.core.exception.InvalidRequestException;
-import kz.medpredict.core.exception.dto.FieldError;
-import kz.medpredict.prediction.model.dto.Field;
-import kz.medpredict.prediction.model.dto.ModelInfo;
+import kz.medpredict.core.exception.dto.FieldValidationErrorResponse;
+import kz.medpredict.prediction.model.dto.PredictionFieldResponse;
+import kz.medpredict.prediction.model.dto.PredictionModelInfoResponse;
 import org.springframework.stereotype.Component;
 
 @Component
 public class InputValidator {
-    public Map<String, Object> validate(JsonNode body, ModelInfo metadata) {
+    public Map<String, Object> validate(JsonNode body, PredictionModelInfoResponse metadata) {
         validateObjectAndKeys(body, metadata);
-        List<FieldError> errors = new ArrayList<>();
+        List<FieldValidationErrorResponse> errors = new ArrayList<>();
         Map<String, Object> values = new LinkedHashMap<>();
-        for (var field : metadata.fields()) {
-            JsonNode value = body.get(field.key());
+        for (var field : metadata.getFields()) {
+            JsonNode value = body.get(field.getKey());
             if (value == null) {
-                if (field.required()) {
-                    errors.add(new FieldError(field.key(), "Обязательное поле"));
+                if (field.isRequired()) {
+                    errors.add(new FieldValidationErrorResponse(field.getKey(), "Обязательное поле"));
                 }
                 continue;
             }
             String error = validationError(value, field);
             if (error != null) {
-                errors.add(new FieldError(field.key(), error));
+                errors.add(new FieldValidationErrorResponse(field.getKey(), error));
             } else {
-                values.put(field.key(), value.isNumber() ? value.doubleValue() : value.textValue());
+                values.put(field.getKey(), value.isNumber() ? value.doubleValue() : value.textValue());
             }
         }
         if (!errors.isEmpty()) {
@@ -43,12 +43,12 @@ public class InputValidator {
         return Collections.unmodifiableMap(values);
     }
 
-    private void validateObjectAndKeys(JsonNode body, ModelInfo metadata) {
+    private void validateObjectAndKeys(JsonNode body, PredictionModelInfoResponse metadata) {
         if (body == null || !body.isObject()) {
             throw new InvalidRequestException();
         }
-        Set<String> knownKeys = metadata.fields().stream()
-                .map(Field::key).collect(Collectors.toSet());
+        Set<String> knownKeys = metadata.getFields().stream()
+                .map(PredictionFieldResponse::getKey).collect(Collectors.toSet());
         var keys = body.fieldNames();
         while (keys.hasNext()) {
             if (!knownKeys.contains(keys.next())) {
@@ -58,29 +58,29 @@ public class InputValidator {
         }
     }
 
-    private String validationError(JsonNode value, Field field) {
-        return switch (field.type()) {
+    private String validationError(JsonNode value, PredictionFieldResponse field) {
+        return switch (field.getType()) {
             case "number" -> numberError(value, field);
             case "select" -> selectError(value, field);
             default -> throw new InvalidModelResponseException();
         };
     }
 
-    private String numberError(JsonNode node, Field field) {
+    private String numberError(JsonNode node, PredictionFieldResponse field) {
         if (!node.isNumber() || !Double.isFinite(node.doubleValue())) {
             return "Ожидается конечное число";
         }
         double value = node.doubleValue();
-        boolean belowMinimum = field.min() != null && value < field.min();
-        boolean aboveMaximum = field.max() != null && value > field.max();
-        boolean fractionalInteger = Boolean.TRUE.equals(field.integer()) && value != Math.rint(value);
+        boolean belowMinimum = field.getMin() != null && value < field.getMin();
+        boolean aboveMaximum = field.getMax() != null && value > field.getMax();
+        boolean fractionalInteger = Boolean.TRUE.equals(field.getInteger()) && value != Math.rint(value);
         return belowMinimum || aboveMaximum || fractionalInteger
                 ? "Значение не соответствует ограничениям поля" : null;
     }
 
-    private String selectError(JsonNode value, Field field) {
+    private String selectError(JsonNode value, PredictionFieldResponse field) {
         boolean allowed = value.isTextual()
-                && field.options().stream().anyMatch(option -> option.value().equals(value.textValue()));
+                && field.getOptions().stream().anyMatch(option -> option.getValue().equals(value.textValue()));
         return allowed ? null : "Выберите допустимое значение";
     }
 }

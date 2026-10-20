@@ -45,14 +45,16 @@ API responses use `Cache-Control: no-store`. Defaults allow CORS only from `http
 
 ## Connect a trained model
 
-Replace `prediction/model/impl/UnavailablePredictionModel` with a `PredictionModel` implementation. Its `info()` must describe the exact preprocessing inputs and approved constraints; its `predict()` must apply the same preprocessing as training and return the version actually used. `PredictionServiceImpl` checks output units and finite values. Keep the demo profile separate. Agree feature schema, artifact, checksum, category encoding, units, preprocessing and numerical parity examples with Ali before enabling real inference.
+Replace `prediction/infrastructure/model/impl/UnavailablePredictionModel` with a `PredictionModel` implementation. Its `info()` must describe the exact preprocessing inputs and approved constraints; its `predict()` must apply the same preprocessing as training and return the version actually used. `PredictionServiceImpl` checks output units and finite values. Keep the demo profile separate. Agree feature schema, artifact, checksum, category encoding, units, preprocessing and numerical parity examples with Ali before enabling real inference.
 
 ## Structure and conventions
 
 - `prediction/controller/`: HTTP endpoints delegating to the service interface.
 - `prediction/service/` and `prediction/service/impl/`: service contract and stateless implementation.
-- `prediction/model/dto/`: standalone records for model metadata, fields, options, and predictions.
-- `prediction/model/` and `prediction/model/impl/`: inference contract and profile-specific providers.
+- `prediction/model/dto/`: standalone classes for model metadata, fields, options, and predictions.
+
+Response DTO names describe their role: `PredictionModelInfoResponse`, `PredictionFieldResponse`, `PredictionFieldOptionResponse`, and `PredictionResultResponse`. Shared error DTOs are `ApiErrorResponse`, `ApiValidationErrorResponse`, and `FieldValidationErrorResponse`. POST input remains dynamic JSON because its fields come from model metadata.
+- `prediction/infrastructure/model/` and its `impl/` package: inference contract and profile-specific providers. `prediction/model/` is reserved for DTOs and future entities.
 - `prediction/validation/`: model-specific input checks.
 - `core/configuration/`: type-safe CORS properties, web configuration, and API cache policy.
 - `core/exception/`, `core/exception/dto/`, `core/exception/handler/`: exceptions, error responses, and global HTTP exception mapping.
@@ -60,8 +62,9 @@ Replace `prediction/model/impl/UnavailablePredictionModel` with a `PredictionMod
 
 This follows the feature-based structure of `restaurant-service`, with service interfaces and implementations and shared infrastructure under `core`. Tests mirror the corresponding production packages. Persistence entities, repositories, and entity mappers can be introduced when there is a persistence requirement; this backend currently has none.
 
-`SKILL.md` contains reusable Spring Boot conventions for this and other backend projects. This README records MedPredict-specific behavior. Constructor injection and immutable dependencies are used throughout. Validation remains schema-driven rather than hardcoding demo fields into Bean Validation DTOs: real models may require different fields. JSON response records are the API DTOs. Database transactions and authentication remain outside the current scope. `SKILL (1).md` concerns the Copilot SDK and does not apply to this service.
+`SKILL.md` contains reusable Spring Boot conventions for this and other backend projects. This README records MedPredict-specific behavior. Constructor injection and immutable dependencies are used throughout. Validation remains schema-driven rather than hardcoding demo fields into Bean Validation DTOs: real models may require different fields. API DTOs are immutable classes using Lombok for getters, equality, and ordinary constructors. Collection constructors retain defensive copying; DTOs do not generate payload-bearing toString methods. spring-boot-starter-validation supplies Jakarta constraints; the service validates model metadata and prediction responses, including nested DTOs. Database transactions and authentication remain outside the current scope. `SKILL (1).md` concerns the Copilot SDK and does not apply to this service.
 
 M1/M2/M3 selection and time-series requests are not part of this initial frontend contract. No authentication or history endpoints are added.
 
 Contract source: [frontend API contract](https://github.com/bsanat/MedPredict/blob/main/docs/api-contract.md).
+

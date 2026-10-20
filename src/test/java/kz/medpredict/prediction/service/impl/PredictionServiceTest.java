@@ -2,10 +2,10 @@ package kz.medpredict.prediction.service.impl;
 
 import kz.medpredict.core.exception.InputValidationException;
 import kz.medpredict.core.exception.InvalidModelResponseException;
-import kz.medpredict.prediction.model.PredictionModel;
-import kz.medpredict.prediction.model.dto.Field;
-import kz.medpredict.prediction.model.dto.ModelInfo;
-import kz.medpredict.prediction.model.dto.Prediction;
+import kz.medpredict.prediction.infrastructure.model.PredictionModel;
+import kz.medpredict.prediction.model.dto.PredictionFieldResponse;
+import kz.medpredict.prediction.model.dto.PredictionModelInfoResponse;
+import kz.medpredict.prediction.model.dto.PredictionResultResponse;
 import kz.medpredict.prediction.service.PredictionService;
 import kz.medpredict.prediction.validation.InputValidator;
 
@@ -24,11 +24,26 @@ class PredictionServiceTest {
     private final ObjectMapper mapper = new ObjectMapper();
     private final PredictionModel model = mock(PredictionModel.class);
     private final InputValidator validator = new InputValidator();
-    private final PredictionService service = new PredictionServiceImpl(model, validator);
-    private final ModelInfo metadata = new ModelInfo(
+    private final jakarta.validation.ValidatorFactory validatorFactory = jakarta.validation.Validation.buildDefaultValidatorFactory();
+    private final PredictionService service = new PredictionServiceImpl(model, validator, validatorFactory.getValidator());
+
+    @org.junit.jupiter.api.AfterEach
+    void closeValidatorFactory() {
+        validatorFactory.close();
+    }
+    private final PredictionModelInfoResponse metadata = new PredictionModelInfoResponse(
             "Synthetic target", "units", 1, "test-v1", List.of(
-                    new Field("value", "Value", "number", true,
+                    new PredictionFieldResponse("value", "Value", "number", true,
                             "units", 0.0, 10.0, true, null)));
+
+    @Test
+    void rejectsMetadataWithInvalidNestedDtoBeforeInference() throws Exception {
+        when(model.info()).thenReturn(new PredictionModelInfoResponse("Target", "units", 1, "v1", List.of(
+                new PredictionFieldResponse("", "Value", "number", true, "units", null, null, null, null))));
+        var body = mapper.readTree("{}");
+        assertThatThrownBy(() -> service.predict(body)).isInstanceOf(InvalidModelResponseException.class);
+        verify(model, never()).predict(anyMap());
+    }
 
     @Test
     void invalidInputNeverReachesModel() throws Exception {
@@ -43,10 +58,10 @@ class PredictionServiceTest {
         when(model.info()).thenReturn(metadata);
         var body = mapper.readTree("{\"value\":5}");
         for (var result : List.of(
-                new Prediction(Double.NaN, "units", "test-v1", "Test"),
-                new Prediction(5, "wrong", "test-v1", "Test"),
-                new Prediction(5, "units", "", "Test"),
-                new Prediction(5, "units", "test-v1", ""))) {
+                new PredictionResultResponse(Double.NaN, "units", "test-v1", "Test"),
+                new PredictionResultResponse(5, "wrong", "test-v1", "Test"),
+                new PredictionResultResponse(5, "units", "", "Test"),
+                new PredictionResultResponse(5, "units", "test-v1", ""))) {
             when(model.predict(anyMap())).thenReturn(result);
             assertThatThrownBy(() -> service.predict(body)).isInstanceOf(InvalidModelResponseException.class);
         }
@@ -57,7 +72,7 @@ class PredictionServiceTest {
     @Test
     void preservesVersionActuallyReturnedByModel() throws Exception {
         when(model.info()).thenReturn(metadata);
-        var result = new Prediction(5, "units", "actual-v2", "Test");
+        var result = new PredictionResultResponse(5, "units", "actual-v2", "Test");
         when(model.predict(anyMap())).thenReturn(result);
         assertThat(service.predict(mapper.readTree("{\"value\":5}"))).isEqualTo(result);
     }
@@ -75,3 +90,4 @@ class PredictionServiceTest {
         }
     }
 }
+

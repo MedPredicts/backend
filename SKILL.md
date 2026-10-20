@@ -25,8 +25,10 @@ Use the project's existing base package and keep its application entry point abo
     │   └── impl/
     ├── model/
     │   ├── dto/
-    │   ├── entity/       # when persistence is needed
-    │   └── impl/         # when the feature has provider implementations
+    │   └── entity/       # when persistence is needed
+    ├── infrastructure/   # when integrations are needed
+    │   └── <integration>/
+    │       └── impl/
     ├── validation/       # when custom validation is needed
     ├── repository/       # when persistence is needed
     └── mapper/           # when nontrivial mapping is needed
@@ -38,16 +40,19 @@ This is a placement guide, not a requirement to generate empty packages. Use act
 
 - Controllers own HTTP routing, request binding, status codes, and delegation. Keep business logic out of controllers.
 - Put service interfaces in `<feature>.service` and stateless `@Service` implementations in `<feature>.service.impl`, named `<Name>ServiceImpl`. Inject interfaces into consumers.
-- Put business-specific provider contracts in the owning feature and implementations in an appropriate `impl` package. Keep integration details out of controllers.
-- Keep standalone request/response DTOs in `<feature>.model.dto`. Prefer immutable records where the project's Java version and serialization requirements permit them. Defensively copy collection-valued state. Preserve intentional distinctions between absent and empty values.
+- Reserve `<feature>.model` for data representations such as DTOs and entities. Put integration contracts and providers in `<feature>.infrastructure.<integration>` and implementations in its `impl` package. For example, inference uses `prediction.infrastructure.model` and `prediction.infrastructure.model.impl`. Keep integration details out of controllers.
+- Keep standalone request/response DTOs as classes in `<feature>.model.dto`. Use Lombok `@Getter`, `@EqualsAndHashCode`, and `@AllArgsConstructor` for boilerplate where appropriate. Prefer immutable fields. Retain explicit constructors only when they perform real work such as defensive collection copying or normalization; preserve absent versus empty values. Avoid `@Data` or `@Value` when their generated setters or `toString` would expose sensitive state or violate immutability.
+- Name DTOs by domain, purpose, and direction: `<Domain><Operation>Request` for inputs and `<Domain><Purpose>Response` for outputs, for example `MenuCategoryCreateRequest`, `MenuCategoryUpdateRequest`, and `MenuCategoryViewResponse`. Give nested response DTOs equally descriptive names. Avoid generic names such as `Field`, `Option`, or `Info` and ambiguous names that resemble entities. Use shared error names such as `ApiErrorResponse` where the scope is cross-feature. Do not invent CRUD operations or request wrappers just to satisfy a naming pattern; dynamic payloads can remain dynamic. Preserve JSON property names when renaming Java types.
+- Use the Spring Boot-managed Lombok version, configure annotation processing for the project's compiler, and keep Lombok out of the packaged runtime. Preserve existing annotation processors when adding Lombok. Verify generated getters, constructors, equality, JSON serialization, and Bean Validation through compilation and relevant tests.
 - Keep persistence entities in `<feature>.model.entity`, repositories in `<feature>.repository`, and substantial conversion logic in `<feature>.mapper`. Do not expose entities directly as API responses.
 - Put shared configuration and configuration properties in `core.configuration`. Put shared error types, response DTOs, and global exception handlers under `core.exception`. Keep feature-only helpers and domain behavior in the owning feature; core must not depend on feature implementation classes.
-- Use constructor injection, `private final` dependencies, appropriate Spring stereotypes, and `@Override` on implementations. Keep methods focused, names descriptive, imports explicit and unused imports removed. Avoid anonymous implementations for substantial providers and catch-all utility classes.
+- Use constructor injection with Lombok `@RequiredArgsConstructor` and `private final` dependencies in controllers, services, configuration classes, and other Spring components whose constructors only assign dependencies. Do not add redundant `@Autowired` to a single generated constructor or constructor annotations to components without required dependencies. Keep explicit constructors when they perform real initialization or need injection annotations such as qualifiers that are not copied by Lombok; verify injection behavior when replacing them.
+- Use appropriate Spring stereotypes and `@Override` on implementations. Keep methods focused, names descriptive, imports explicit and unused imports removed. Avoid anonymous implementations for substantial providers and catch-all utility classes.
 
 ## API boundaries and error handling
 
 - Preserve documented paths, JSON property names, optionality, status codes, units, and error schemas. Update callers, tests, and documentation together when a contract change is authorized.
-- For fixed-shape requests, use DTOs and Jakarta Bean Validation compatible with the project's Spring version. Use metadata-driven validation for genuinely dynamic schemas; do not force them into hardcoded DTOs.
+- Use `spring-boot-starter-validation` and Jakarta constraints for DTO validation. Invoke validation explicitly at service/integration boundaries or use `@Valid` for bound fixed-shape requests. Keep metadata-driven checks for genuinely dynamic schemas; do not force them into hardcoded DTOs.
 - Validate required values, types, supported categories, numerical constraints, and cross-field rules at the server boundary. Decide unknown-field and duplicate-key handling according to the contract. Avoid silently coercing input when the contract requires strict types.
 - Validate external service outputs before exposing them as successful results. Handle non-finite numbers and inconsistent units or identifiers where applicable.
 - Use specific domain/integration exceptions and typed error responses through `@RestControllerAdvice`. Map HTTP statuses deliberately, preferably using `HttpStatus`. Do not turn unrelated programming errors into misleading business errors.
