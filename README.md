@@ -12,7 +12,7 @@ $env:JAVA_HOME = "$env:USERPROFILE\.jdks\ms-17.0.17"
 .\mvnw.cmd spring-boot:run
 ```
 
-The API listens on port 8080 (`PORT` overrides it). With no profile, both endpoints return HTTP 503 `MODEL_UNAVAILABLE`: there is no trained model yet, and the frontend correctly keeps the form unavailable.
+The API listens on port 8080 (`PORT` overrides it). With no profile, prediction and metadata endpoints return HTTP 503 `MODEL_UNAVAILABLE`. A trained artifact is enabled explicitly with the `onnx` profile; demo is a separate profile. Selecting both profiles is a configuration error.
 
 For explicit, synthetic integration testing:
 
@@ -37,15 +37,43 @@ Here `real` means the frontend uses HTTP. If the server runs the demo profile, i
 - `GET /api/v1/model/info`: ordered field metadata, output unit, precision, and model version.
 - `POST /api/v1/predictions`: JSON object with `age`, `sex` (`male`/`female`), `bmi`, `totalCholesterol`, and `glucose` for the demo provider. Numeric strings, nulls, non-finite numbers, invalid categories, and missing required fields are rejected.
 - `200`: `predictedValue`, `unit`, `modelVersion`, `disclaimer`.
+- Both successful endpoints also provide optional `predictionType: estimated_current_measurement` and `demo`. Trained inference returns `demo: false`; the explicit demo provider returns `demo: true`.
 - `400` field errors: `{"error":"VALIDATION_ERROR","fields":[{"field":"age","message":"Обязательное поле"}]}`.
 - Malformed objects, duplicate keys, trailing JSON, or unknown keys: `400` `INVALID_REQUEST`, without echoing submitted values. Unknown field names cannot be returned in `fields` because the frontend rejects those responses.
 - Unavailable or invalid inference: `503` `MODEL_UNAVAILABLE`. No automatic fallback.
 
 API responses use `Cache-Control: no-store`. Defaults allow CORS only from `http://localhost:5173` and `http://127.0.0.1:5173`, with no credentials. Override the comma-separated allowlist via `CORS_ALLOWED_ORIGINS`. Configure HTTPS at your deployment boundary. Do not enable request/response-body tracing for medical inputs.
 
-## Connect a trained model
+## Run the trained ONNX model
 
-Replace `prediction/infrastructure/model/impl/UnavailablePredictionModel` with a `PredictionModel` implementation. Its `info()` must describe the exact preprocessing inputs and approved constraints; its `predict()` must apply the same preprocessing as training and return the version actually used. `PredictionServiceImpl` checks output units and finite values. Keep the demo profile separate. Agree feature schema, artifact, checksum, category encoding, units, preprocessing and numerical parity examples with Ali before enabling real inference.
+Use the model bundle produced by the frontend repository's reproducible `ml/` workspace. The directory must contain `model.onnx` and `metadata.json` from the same export:
+
+```sh
+export MEDPREDICT_MODEL_DIRECTORY=/absolute/path/to/frontend/ml/artifacts
+export MEDPREDICT_MODEL_VERSION=MedPredict-SBP-mlp-v2 # optional exact version pin; use the exported version
+sh mvnw spring-boot:run -Dspring-boot.run.profiles=onnx
+```
+
+On Windows, use the same environment variables and `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=onnx"`. A JDK 17+ is required. ONNX Runtime Java CPU 1.24.3 is pinned in Maven; its native CPU library was tested on macOS arm64 with JDK 21. No external inference API or Python server is used.
+
+`OnnxPredictionModel` loads one immutable session at startup. It checks metadata schema version 1, the optional pinned model version, SHA-256 of the exact loaded bytes, feature names/order, category encoding, units, finite domain bounds, and ONNX tensor names/types/shapes. Input is `features: float32[batch,5]` in the order `age`, `sex`, `bmi`, `totalCholesterol`, `glucose`; categories are `male=0`, `female=1`. Output is `predictedValue: float32[batch,1]` in mmHg. Scaling and output inverse transformation are part of ONNX, so Java performs no extra normalization or unit conversion. Cholesterol and fasting plasma glucose inputs are mmol/L.
+
+Required metadata keys are `schemaVersion`, `modelVersion`, `sha256`, `inputName`, `outputName`, `featureOrder`, `sexEncoding`, `indicatorName`, `unit`, `decimalPlaces`, `fields`, `predictionType`, `demo`, and `disclaimer`. Additional experiment provenance may be included. Numeric form bounds come from the training artifact's supported domain, and are not clinical reference intervals. The frontend obtains them through `GET /api/v1/model/info`.
+
+Missing, corrupt, incompatible or incorrectly hashed artifacts leave the model unavailable and return 503. Inference failures return 503 without fallback values. Model inputs are not stored or logged. Replace a bundle atomically and restart the process to load it.
+
+- `GET /api/v1/health/live`: HTTP 200 with `{"status":"UP"}` when HTTP service is running.
+- `GET /api/v1/health/ready` and `GET /api/v1/model/status`: HTTP 200 for `READY` or explicitly labeled `DEMO`, HTTP 503 for `UNAVAILABLE` or `INVALID_ARTIFACT`. Response includes `ready`, `status`, optional `modelVersion`, and `demo`, without paths or exception details.
+
+Run Python–Java parity and real API integration against the exported bundle, in addition to the ordinary test suite:
+
+```sh
+sh mvnw test -Dmedpredict.model.test-directory=/absolute/path/to/frontend/ml/artifacts
+```
+
+The optional bundle tests require `golden.json` with synthetic inputs and expected Python outputs. They compare Java ONNX predictions at the declared tolerance (at most 0.01 mmHg). Ordinary tests separately cover synthetic ONNX fixtures and unavailable/corrupt artifacts.
+
+The result is an experimental estimate of a current systolic measurement. It does not forecast future pressure, diagnose hypertension, replace a validated blood-pressure device, or support changing medication. Test performance on NHANES does not establish performance for Kazakhstan's population or clinical validation.
 
 ## Structure and conventions
 

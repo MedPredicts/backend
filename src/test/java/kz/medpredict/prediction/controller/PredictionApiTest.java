@@ -20,12 +20,19 @@ class PredictionApiTest {
             .andExpect(jsonPath("$.fields.length()").value(5))
             .andExpect(jsonPath("$.fields[0].key").value("age"))
             .andExpect(jsonPath("$.fields[0].min").doesNotExist())
-            .andExpect(jsonPath("$.modelVersion").value("demo-example"));
+            .andExpect(jsonPath("$.modelVersion").value("demo-example"))
+            .andExpect(jsonPath("$.predictionType").value("estimated_current_measurement"))
+            .andExpect(jsonPath("$.demo").value(true));
         mvc.perform(post("/api/v1/predictions").contentType("application/json").content(VALID))
             .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"))
             .andExpect(jsonPath("$.predictedValue").value(134.2))
             .andExpect(jsonPath("$.unit").value("мм рт. ст."))
-            .andExpect(jsonPath("$.modelVersion").value("demo-example"));
+            .andExpect(jsonPath("$.modelVersion").value("demo-example"))
+            .andExpect(jsonPath("$.predictionType").value("estimated_current_measurement"))
+            .andExpect(jsonPath("$.demo").value(true));
+        mvc.perform(get("/api/v1/health/ready")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("DEMO"))
+            .andExpect(jsonPath("$.demo").value(true));
     }
     @Test void missingAndWrongTypesAreFieldErrors() throws Exception {
         mvc.perform(post("/api/v1/predictions").contentType("application/json")

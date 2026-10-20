@@ -7,6 +7,7 @@ import kz.medpredict.prediction.infrastructure.model.PredictionModel;
 import kz.medpredict.prediction.model.dto.PredictionCreateRequest;
 import kz.medpredict.prediction.model.dto.PredictionModelInfoResponse;
 import kz.medpredict.prediction.model.dto.PredictionResultResponse;
+import kz.medpredict.prediction.model.dto.PredictionModelStatusResponse;
 import kz.medpredict.prediction.service.PredictionService;
 import kz.medpredict.prediction.validation.InputValidator;
 import kz.medpredict.prediction.validation.ModelMetadataValidator;
@@ -20,6 +21,11 @@ public class PredictionServiceImpl implements PredictionService {
     private final InputValidator inputValidator;
     private final Validator beanValidator;
     private final ModelMetadataValidator metadataValidator;
+
+    @Override
+    public PredictionModelStatusResponse modelStatus() {
+        return model.status();
+    }
 
     @Override
     public PredictionModelInfoResponse modelInfo() {

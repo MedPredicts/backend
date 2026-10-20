@@ -12,6 +12,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 class UnavailableModelTest {
     @Test
+    void livenessIsIndependentOfModelReadiness() throws Exception {
+        mvc.perform(get("/api/v1/health/live")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("UP"));
+        for (String path : new String[]{"/api/v1/health/ready", "/api/v1/model/status"}) {
+            mvc.perform(get(path)).andExpect(status().isServiceUnavailable())
+                    .andExpect(header().string("Cache-Control", "no-store"))
+                    .andExpect(jsonPath("$.ready").value(false))
+                    .andExpect(jsonPath("$.status").value("UNAVAILABLE"))
+                    .andExpect(jsonPath("$.modelVersion").doesNotExist());
+        }
+    }
+    @Test
     void unavailableModelErrorIsLocalized() throws Exception {
         mvc.perform(get("/api/v1/model/info").header("Accept-Language", "en"))
                 .andExpect(status().isServiceUnavailable())

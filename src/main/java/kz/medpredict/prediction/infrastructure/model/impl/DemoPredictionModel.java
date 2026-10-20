@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
-@Profile("demo")
+@Profile("demo & !onnx")
 public class DemoPredictionModel implements PredictionModel {
     private static final String VERSION = "demo-example";
     private static final String UNIT = "мм рт. ст.";
@@ -22,7 +22,7 @@ public class DemoPredictionModel implements PredictionModel {
                             List.of(new PredictionFieldOptionResponse("male", "Мужской"), new PredictionFieldOptionResponse("female", "Женский"))),
                     number("bmi", "Индекс массы тела", "кг/м²"),
                     number("totalCholesterol", "Общий холестерин", "ммоль/л"),
-                    number("glucose", "Глюкоза", "ммоль/л")));
+                    number("glucose", "Глюкоза", "ммоль/л")), "estimated_current_measurement", true);
 
     @Override
     public PredictionModelInfoResponse info() {
@@ -32,7 +32,8 @@ public class DemoPredictionModel implements PredictionModel {
     @Override
     public PredictionResultResponse predict(Map<String, Object> input) {
         return new PredictionResultResponse(134.2, UNIT, VERSION,
-                "DEMO: фиксированный пример, не рассчитан по введённым данным. Не является диагнозом.");
+                "DEMO: фиксированный пример, не рассчитан по введённым данным. Не является диагнозом.",
+                "estimated_current_measurement", true);
     }
 
     private static PredictionFieldResponse number(String key, String label, String unit) {

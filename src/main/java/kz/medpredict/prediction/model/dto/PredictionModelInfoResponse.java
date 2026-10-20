@@ -1,5 +1,6 @@
 package kz.medpredict.prediction.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -28,13 +29,26 @@ public final class PredictionModelInfoResponse {
     @NotEmpty @Valid
     @Schema(description = "Ordered input definitions for metadata, or known-field violations for error responses.")
     private final List<PredictionFieldResponse> fields;
+    @Schema(description = "Meaning of the numerical output; trained SBP models estimate a current measurement.")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private final String predictionType;
+    @Schema(description = "True only for an explicitly selected fixed demo provider.")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private final Boolean demo;
 
     // Copy collections so callers cannot mutate response state.
     public PredictionModelInfoResponse(String indicatorName, String unit, Integer decimalPlaces, String modelVersion, List<PredictionFieldResponse> fields) {
+        this(indicatorName, unit, decimalPlaces, modelVersion, fields, null, null);
+    }
+
+    public PredictionModelInfoResponse(String indicatorName, String unit, Integer decimalPlaces, String modelVersion,
+            List<PredictionFieldResponse> fields, String predictionType, Boolean demo) {
         this.indicatorName = indicatorName;
         this.unit = unit;
         this.decimalPlaces = decimalPlaces;
         this.modelVersion = modelVersion;
         this.fields = fields == null ? null : List.copyOf(fields);
+        this.predictionType = predictionType;
+        this.demo = demo;
     }
 }

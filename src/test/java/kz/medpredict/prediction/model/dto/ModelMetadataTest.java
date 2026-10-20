@@ -10,6 +10,19 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ModelMetadataTest {
     @Test
+    void optionalSemanticsPreserveLegacyNullPrecisionAndShapes() throws Exception {
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        var metadata = new PredictionModelInfoResponse("Target", "units", null, "v1", List.of());
+        var json = mapper.readTree(mapper.writeValueAsBytes(metadata));
+        assertThat(json.has("decimalPlaces")).isTrue();
+        assertThat(json.path("decimalPlaces").isNull()).isTrue();
+        assertThat(json.has("predictionType")).isFalse();
+        assertThat(json.has("demo")).isFalse();
+        var result = mapper.readTree(mapper.writeValueAsBytes(new PredictionResultResponse(1, "units", "v1", "Test")));
+        assertThat(result.size()).isEqualTo(4);
+        assertThat(result.has("demo")).isFalse();
+    }
+    @Test
     void metadataDoesNotChangeWhenSourceCollectionsChange() {
         var options = new ArrayList<>(List.of(new PredictionFieldOptionResponse("a", "A")));
         var field = new PredictionFieldResponse("category", "Category", "select", true,

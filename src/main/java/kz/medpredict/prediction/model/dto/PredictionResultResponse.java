@@ -1,5 +1,6 @@
 package kz.medpredict.prediction.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
@@ -22,5 +23,14 @@ public final class PredictionResultResponse {
     @NotBlank
     @Schema(description = "Educational limitations, including explicit labeling for fixed demo responses.")
     private final String disclaimer;
+    @Schema(description = "Meaning of the output; estimated_current_measurement does not forecast future pressure.")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private final String predictionType;
+    @Schema(description = "True only for an explicitly selected fixed demo provider.")
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private final Boolean demo;
 
+    public PredictionResultResponse(double predictedValue, String unit, String modelVersion, String disclaimer) {
+        this(predictedValue, unit, modelVersion, disclaimer, null, null);
+    }
 }
