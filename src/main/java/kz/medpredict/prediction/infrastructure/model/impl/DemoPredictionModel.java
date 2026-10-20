@@ -3,9 +3,9 @@ package kz.medpredict.prediction.infrastructure.model.impl;
 import java.util.List;
 import java.util.Map;
 import kz.medpredict.prediction.infrastructure.model.PredictionModel;
+import kz.medpredict.prediction.model.dto.PredictionFieldOptionResponse;
 import kz.medpredict.prediction.model.dto.PredictionFieldResponse;
 import kz.medpredict.prediction.model.dto.PredictionModelInfoResponse;
-import kz.medpredict.prediction.model.dto.PredictionFieldOptionResponse;
 import kz.medpredict.prediction.model.dto.PredictionResultResponse;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -40,4 +40,3 @@ public class DemoPredictionModel implements PredictionModel {
         return new PredictionFieldResponse(key, label, "number", true, unit, null, null, null, null);
     }
 }
-

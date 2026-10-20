@@ -21,4 +21,3 @@ public class UnavailablePredictionModel implements PredictionModel {
         throw new ModelUnavailableException();
     }
 }
-

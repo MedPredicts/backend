@@ -11,6 +11,17 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 class UnavailableModelTest {
+    @Test
+    void unavailableModelErrorIsLocalized() throws Exception {
+        mvc.perform(get("/api/v1/model/info").header("Accept-Language", "en"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("No trained model is configured."));
+        mvc.perform(post("/api/v1/predictions").contentType("application/json")
+                        .header("Accept-Language", "kk").content("{}"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.message").value("Үйлесімді модель қолжетімсіз."));
+    }
+
     @Autowired MockMvc mvc;
     @Test void noSilentDemoFallback() throws Exception {
         mvc.perform(get("/api/v1/model/info")).andExpect(status().isServiceUnavailable())

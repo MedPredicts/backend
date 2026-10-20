@@ -1,7 +1,10 @@
 package kz.medpredict.core.exception;
 
-public class InvalidRequestException extends RuntimeException {
+import kz.medpredict.core.i18n.MessageCode;
+import kz.medpredict.core.util.ErrorCode;
+
+public class InvalidRequestException extends ServiceValidationException {
     public InvalidRequestException() {
-        super("Expected a JSON object containing only supported fields.");
+        super(ErrorCode.INVALID_REQUEST, MessageCode.INVALID_REQUEST);
     }
 }

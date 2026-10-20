@@ -9,4 +9,3 @@ public interface PredictionModel {
     PredictionModelInfoResponse info();
     PredictionResultResponse predict(Map<String, Object> input);
 }
-

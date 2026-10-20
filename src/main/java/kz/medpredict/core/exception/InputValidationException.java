@@ -2,16 +2,17 @@ package kz.medpredict.core.exception;
 
 import java.util.List;
 import kz.medpredict.core.exception.dto.FieldValidationErrorResponse;
+import kz.medpredict.core.i18n.MessageCode;
+import kz.medpredict.core.util.ErrorCode;
+import lombok.Getter;
 
-public class InputValidationException extends RuntimeException {
+@Getter
+public class InputValidationException extends ServiceValidationException {
     private final List<FieldValidationErrorResponse> fields;
 
     public InputValidationException(List<FieldValidationErrorResponse> fields) {
-        super("Prediction input does not match the model schema.");
+        super(ErrorCode.VALIDATION_ERROR, MessageCode.VALIDATION_FAILED);
         this.fields = List.copyOf(fields);
     }
 
-    public List<FieldValidationErrorResponse> getFields() {
-        return fields;
-    }
 }

@@ -1,7 +1,10 @@
 package kz.medpredict.core.exception;
 
-public class ModelUnavailableException extends RuntimeException {
+import kz.medpredict.core.i18n.MessageCode;
+import kz.medpredict.core.util.ErrorCode;
+
+public class ModelUnavailableException extends ServiceValidationException {
     public ModelUnavailableException() {
-        super("No trained model is configured.");
+        super(ErrorCode.MODEL_UNAVAILABLE, MessageCode.MODEL_UNAVAILABLE);
     }
 }

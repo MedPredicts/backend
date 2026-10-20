@@ -8,8 +8,10 @@ import kz.medpredict.prediction.model.dto.PredictionModelInfoResponse;
 import kz.medpredict.prediction.model.dto.PredictionResultResponse;
 import kz.medpredict.prediction.service.PredictionService;
 import kz.medpredict.prediction.validation.InputValidator;
+import kz.medpredict.prediction.validation.ModelMetadataValidator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import kz.medpredict.prediction.model.dto.PredictionCreateRequest;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,7 +27,7 @@ class PredictionServiceTest {
     private final PredictionModel model = mock(PredictionModel.class);
     private final InputValidator validator = new InputValidator();
     private final jakarta.validation.ValidatorFactory validatorFactory = jakarta.validation.Validation.buildDefaultValidatorFactory();
-    private final PredictionService service = new PredictionServiceImpl(model, validator, validatorFactory.getValidator());
+    private final PredictionService service = new PredictionServiceImpl(model, validator, validatorFactory.getValidator(), new ModelMetadataValidator(validatorFactory.getValidator()));
 
     @org.junit.jupiter.api.AfterEach
     void closeValidatorFactory() {
@@ -41,7 +43,7 @@ class PredictionServiceTest {
         when(model.info()).thenReturn(new PredictionModelInfoResponse("Target", "units", 1, "v1", List.of(
                 new PredictionFieldResponse("", "Value", "number", true, "units", null, null, null, null))));
         var body = mapper.readTree("{}");
-        assertThatThrownBy(() -> service.predict(body)).isInstanceOf(InvalidModelResponseException.class);
+        assertThatThrownBy(() -> service.predict(new PredictionCreateRequest(body))).isInstanceOf(InvalidModelResponseException.class);
         verify(model, never()).predict(anyMap());
     }
 
@@ -49,7 +51,7 @@ class PredictionServiceTest {
     void invalidInputNeverReachesModel() throws Exception {
         when(model.info()).thenReturn(metadata);
         var body = mapper.readTree("{\"value\":11}");
-        assertThatThrownBy(() -> service.predict(body)).isInstanceOf(InputValidationException.class);
+        assertThatThrownBy(() -> service.predict(new PredictionCreateRequest(body))).isInstanceOf(InputValidationException.class);
         verify(model, never()).predict(anyMap());
     }
 
@@ -63,10 +65,10 @@ class PredictionServiceTest {
                 new PredictionResultResponse(5, "units", "", "Test"),
                 new PredictionResultResponse(5, "units", "test-v1", ""))) {
             when(model.predict(anyMap())).thenReturn(result);
-            assertThatThrownBy(() -> service.predict(body)).isInstanceOf(InvalidModelResponseException.class);
+            assertThatThrownBy(() -> service.predict(new PredictionCreateRequest(body))).isInstanceOf(InvalidModelResponseException.class);
         }
         when(model.predict(anyMap())).thenReturn(null);
-        assertThatThrownBy(() -> service.predict(body)).isInstanceOf(InvalidModelResponseException.class);
+        assertThatThrownBy(() -> service.predict(new PredictionCreateRequest(body))).isInstanceOf(InvalidModelResponseException.class);
     }
 
     @Test
@@ -74,7 +76,7 @@ class PredictionServiceTest {
         when(model.info()).thenReturn(metadata);
         var result = new PredictionResultResponse(5, "units", "actual-v2", "Test");
         when(model.predict(anyMap())).thenReturn(result);
-        assertThat(service.predict(mapper.readTree("{\"value\":5}"))).isEqualTo(result);
+        assertThat(service.predict(new PredictionCreateRequest(mapper.readTree("{\"value\":5}")))).isEqualTo(result);
     }
 
     @Test

@@ -12,6 +12,7 @@ import kz.medpredict.core.exception.InputValidationException;
 import kz.medpredict.core.exception.InvalidModelResponseException;
 import kz.medpredict.core.exception.InvalidRequestException;
 import kz.medpredict.core.exception.dto.FieldValidationErrorResponse;
+import kz.medpredict.core.i18n.MessageCode;
 import kz.medpredict.prediction.model.dto.PredictionFieldResponse;
 import kz.medpredict.prediction.model.dto.PredictionModelInfoResponse;
 import org.springframework.stereotype.Component;
@@ -26,7 +27,7 @@ public class InputValidator {
             JsonNode value = body.get(field.getKey());
             if (value == null) {
                 if (field.isRequired()) {
-                    errors.add(new FieldValidationErrorResponse(field.getKey(), "Обязательное поле"));
+                    errors.add(new FieldValidationErrorResponse(field.getKey(), MessageCode.FIELD_REQUIRED));
                 }
                 continue;
             }
@@ -68,19 +69,19 @@ public class InputValidator {
 
     private String numberError(JsonNode node, PredictionFieldResponse field) {
         if (!node.isNumber() || !Double.isFinite(node.doubleValue())) {
-            return "Ожидается конечное число";
+            return MessageCode.NUMBER_REQUIRED;
         }
         double value = node.doubleValue();
         boolean belowMinimum = field.getMin() != null && value < field.getMin();
         boolean aboveMaximum = field.getMax() != null && value > field.getMax();
         boolean fractionalInteger = Boolean.TRUE.equals(field.getInteger()) && value != Math.rint(value);
         return belowMinimum || aboveMaximum || fractionalInteger
-                ? "Значение не соответствует ограничениям поля" : null;
+                ? MessageCode.NUMBER_CONSTRAINTS : null;
     }
 
     private String selectError(JsonNode value, PredictionFieldResponse field) {
         boolean allowed = value.isTextual()
                 && field.getOptions().stream().anyMatch(option -> option.getValue().equals(value.textValue()));
-        return allowed ? null : "Выберите допустимое значение";
+        return allowed ? null : MessageCode.OPTION_INVALID;
     }
 }

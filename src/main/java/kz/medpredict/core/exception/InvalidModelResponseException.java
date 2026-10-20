@@ -1,7 +1,10 @@
 package kz.medpredict.core.exception;
 
-public class InvalidModelResponseException extends RuntimeException {
+import kz.medpredict.core.i18n.MessageCode;
+import kz.medpredict.core.util.ErrorCode;
+
+public class InvalidModelResponseException extends ServiceValidationException {
     public InvalidModelResponseException() {
-        super("The model returned an invalid response.");
+        super(ErrorCode.MODEL_UNAVAILABLE, MessageCode.MODEL_INVALID_RESPONSE);
     }
 }

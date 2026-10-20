@@ -32,7 +32,8 @@ class PredictionApiTest {
             .content("{\"age\":\"52\",\"sex\":\"other\"}"))
             .andExpect(status().isBadRequest()).andExpect(jsonPath("$.error").value("VALIDATION_ERROR"))
             .andExpect(jsonPath("$.fields.length()").value(5))
-            .andExpect(jsonPath("$.fields[0].field").value("age"));
+            .andExpect(jsonPath("$.fields[*].field").value(org.hamcrest.Matchers.containsInAnyOrder(
+                    "age", "sex", "bmi", "totalCholesterol", "glucose")));
     }
     @Test void malformedAndUnknownFieldsAreGeneralErrors() throws Exception {
         for (String body : new String[]{"[]", "null", "{", "{} {}", "{\"age\":1,\"age\":2}",
