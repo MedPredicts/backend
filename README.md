@@ -2,7 +2,29 @@
 
 Spring Boot REST API for the MedPredict research prototype. It validates model-specific input, exposes metadata and returns a versioned response. This repository targets Java 17 and uses Spring Boot 3.5.16, Maven Wrapper and springdoc 2.8.13. No database, authentication, request-body logging or prediction persistence is implemented.
 
-[Project documentation](https://github.com/MedPredicts/documentation#readme) · [Frontend](https://github.com/MedPredicts/frontend#readme) · [ML research](https://github.com/MedPredicts/ml-ai#readme) · [Architecture sources](docs/architecture/diagrams/README.md)
+[Project documentation](https://github.com/MedPredicts/documentation#readme) · [Jira MED tasks](https://medpredict.atlassian.net/jira/software/projects/MED/boards/2) · [Frontend](https://github.com/MedPredicts/frontend#readme) · [ML research](https://github.com/MedPredicts/ml-ai#readme) · [Architecture sources](docs/architecture/diagrams/README.md)
+
+## Problem, target users and expected results
+
+Medical prediction tasks have different targets, units and observation times. A fixed example, an estimate of current pressure and a future forecast must not be presented as interchangeable results. MedPredict addresses the engineering problem of preserving those definitions from data preparation to the displayed output. This backend provides the checked HTTP boundary: ordered metadata, input validation, explicit provider state and a response carrying its actual version and disclaimer.
+
+The intended audience is students, researchers and participants in supervised demonstrations. Frontend developers and ML integrators use this API to connect the research workflow. Patients are not treated as a validated deployment audience, and the prototype is not a clinical decision service.
+
+Expected backend results are a documented and testable REST contract, independent input/output checks, localized errors, distinct unavailable and fixed-demo states, and reproducible setup/run/test instructions. The wider project also aims to provide model-versus-baseline experiments, a versioned model bundle, a web result flow and PDF export; those outputs belong to the corresponding ML/frontend components and are not all implemented in this backend revision.
+
+## Team, duties and supervisor
+
+| Team member | Responsibilities |
+|---|---|
+| Sanat Bogenbayev / Санат Бөгенбаев | Frontend, UI/UX, localization, PDF export and browser checks |
+| Ali Baimen / Али Баймен | Data preparation, ML experiments, model evaluation, methodology and research documentation |
+| Oralkhan Seilkhan Sairanuly / Оралхан Сеилхан | Backend, REST contract, server-side validation and component integration |
+
+The supervisor named by the team is **Турарова Маржан Кабдыкалиевна**. This identifies the supplied supervisor; it does not record her approval or acceptance of the implementation. Role assignments describe responsibility and do not substitute for identifiable contributions or peer review.
+
+## Chosen technologies
+
+The server uses Java 17, Spring Boot 3.5.16, Maven Wrapper, springdoc OpenAPI 2.8.13, Jakarta Bean Validation, Jackson and Lombok. Dependencies and build configuration are recorded in [pom.xml](pom.xml). Components communicate through HTTP/JSON; this published source has no database or ONNX Runtime dependency. The selected technologies support the validation, API-documentation and stateless service boundaries described below.
 
 ## Scope for the commission
 
@@ -14,9 +36,7 @@ Spring Boot REST API for the MedPredict research prototype. It validates model-s
 | ONNX inference and model readiness endpoints | Not implemented in this checkout |
 | Accounts, saved predictions, M1/M3 endpoints and module selection | Not implemented |
 
-This source snapshot is based on commit `3588c363e3d34946d86ce75be39a5695a8073176`. A separate local backend integration and the ML workspace contain trained M2/ONNX evidence; their presence does not add an ONNX provider to this checkout. Setting an `onnx` profile or a model-directory environment variable alone cannot enable trained inference here. Remote `main` was fetched and matched this source revision before the documentation-only update on 24 October 2026.
-
-Oralkhan Seilkhan leads backend and integration, Sanat Bogenbayev leads frontend/UI, and Ali Baimen leads ML. Role assignments describe responsibility; they do not substitute for reviewed changes or supervisor acceptance.
+The application code is based on commit `3588c363e3d34946d86ce75be39a5695a8073176`; later README/diagram commits do not add server capabilities. A separate local backend integration and the ML workspace contain trained M2/ONNX evidence; their presence does not add an ONNX provider to this checkout. Setting an `onnx` profile or a model-directory environment variable alone cannot enable trained inference here.
 
 ## Architecture and editable diagrams
 
@@ -32,7 +52,14 @@ The shared diagrams describe the overall project and local M2 integration, inclu
 
 ## Run
 
-Prerequisites: JDK 17 or newer and network access for the Maven Wrapper to obtain Maven/dependencies. Run from the repository root. On macOS/Linux:
+Prerequisites: Git, JDK 17 or newer and network access for the Maven Wrapper to obtain Maven/dependencies. A separate Maven installation is unnecessary. To obtain the published source on macOS/Linux:
+
+```sh
+git clone https://github.com/MedPredicts/backend.git
+cd backend
+```
+
+From the repository root, install/resolve dependencies through the wrapper, run the tests and start the default unavailable provider:
 
 ```sh
 sh ./mvnw test
