@@ -1,10 +1,45 @@
 # MedPredict backend
 
-Java 17+ / Spring Boot / Maven. No database, request-body logging, or prediction persistence.
+Spring Boot REST API for the MedPredict research prototype. It validates model-specific input, exposes metadata and returns a versioned response. This repository targets Java 17 and uses Spring Boot 3.5.16, Maven Wrapper and springdoc 2.8.13. No database, authentication, request-body logging or prediction persistence is implemented.
+
+[Project documentation](https://github.com/MedPredicts/documentation#readme) · [Frontend](https://github.com/MedPredicts/frontend#readme) · [ML research](https://github.com/MedPredicts/ml-ai#readme) · [Architecture sources](docs/architecture/diagrams/README.md)
+
+## Scope for the commission
+
+| Capability | State in this checkout |
+|---|---|
+| REST metadata and prediction contract, validation, localized errors, CORS and OpenAPI | Implemented |
+| Default provider | Unavailable; returns `503 MODEL_UNAVAILABLE` |
+| Explicit `demo` profile | Fixed synthetic example: 134.2 mmHg, version `demo-example` |
+| ONNX inference and model readiness endpoints | Not implemented in this checkout |
+| Accounts, saved predictions, M1/M3 endpoints and module selection | Not implemented |
+
+This source snapshot is based on commit `3588c363e3d34946d86ce75be39a5695a8073176`. A separate local backend integration and the ML workspace contain trained M2/ONNX evidence; their presence does not add an ONNX provider to this checkout. Setting an `onnx` profile or a model-directory environment variable alone cannot enable trained inference here. Remote `main` was fetched and matched this source revision before the documentation-only update on 24 October 2026.
+
+Oralkhan Seilkhan leads backend and integration, Sanat Bogenbayev leads frontend/UI, and Ali Baimen leads ML. Role assignments describe responsibility; they do not substitute for reviewed changes or supervisor acceptance.
+
+## Architecture and editable diagrams
+
+The shared diagrams describe the overall project and local M2 integration, including the separate ONNX path and planned application modules. The implementation table above defines what this backend checkout actually provides. Each local preview has a matching editable diagrams.net source; the [diagram index](docs/architecture/diagrams/README.md) records this scope.
+
+| Required diagram | Preview | Editable source |
+|---|---|---|
+| System context | [PNG](docs/architecture/diagrams/context.png) | [drawio](docs/architecture/diagrams/context.drawio) |
+| Use cases | [PNG](docs/architecture/diagrams/use-cases.png) | [drawio](docs/architecture/diagrams/use-cases.drawio) |
+| Components | [PNG](docs/architecture/diagrams/components.png) | [drawio](docs/architecture/diagrams/components.drawio) |
+
+![MedPredict system context](docs/architecture/diagrams/context.png)
 
 ## Run
 
-Set `JAVA_HOME` to a JDK 17 or newer, then use the Maven wrapper:
+Prerequisites: JDK 17 or newer and network access for the Maven Wrapper to obtain Maven/dependencies. Run from the repository root. On macOS/Linux:
+
+```sh
+sh ./mvnw test
+sh ./mvnw spring-boot:run
+```
+
+On Windows PowerShell, set `JAVA_HOME` to your installed JDK, then use the wrapper:
 
 ```powershell
 $env:JAVA_HOME = "$env:USERPROFILE\.jdks\ms-17.0.17"
@@ -12,9 +47,15 @@ $env:JAVA_HOME = "$env:USERPROFILE\.jdks\ms-17.0.17"
 .\mvnw.cmd spring-boot:run
 ```
 
-The API listens on port 8080 (`PORT` overrides it). With no profile, both endpoints return HTTP 503 `MODEL_UNAVAILABLE`: there is no trained model yet, and the frontend correctly keeps the form unavailable.
+The API listens on port 8080 (`PORT` overrides it). With no profile, both prediction endpoints return HTTP 503 `MODEL_UNAVAILABLE`: this checkout has no configured trained-model provider. OpenAPI remains available.
 
 For explicit, synthetic integration testing:
+
+```sh
+sh ./mvnw spring-boot:run -Dspring-boot.run.profiles=demo
+```
+
+Windows PowerShell equivalent:
 
 ```powershell
 .\mvnw.cmd spring-boot:run "-Dspring-boot.run.profiles=demo"
@@ -32,6 +73,19 @@ VITE_API_TIMEOUT_MS=15000
 
 Here `real` means the frontend uses HTTP. If the server runs the demo profile, its output remains a fixed demo example.
 
+The frontend's standard Vite proxy is another option: keep `VITE_API_BASE_URL` empty and run its API target on `http://127.0.0.1:8080`.
+
+With the explicit demo server running, these requests exercise the contract using synthetic values:
+
+```sh
+curl -i http://127.0.0.1:8080/api/v1/model/info
+curl -i http://127.0.0.1:8080/api/v1/predictions \
+  -H 'Content-Type: application/json' -H 'Accept-Language: en' \
+  --data '{"age":52,"sex":"male","bmi":27.4,"totalCholesterol":5.6,"glucose":5.9}'
+```
+
+Expected demo result: `predictedValue` 134.2 and `modelVersion` `demo-example`, with an explicit disclaimer. This checks transport and presentation, not model quality. The default unavailable provider returns 503 instead. No backend or browser checks were rerun for this documentation update; `sh ./mvnw test` is the command for verifying the selected source snapshot.
+
 ## Contract
 
 - `GET /api/v1/model/info`: ordered field metadata, output unit, precision, and model version.
@@ -45,7 +99,9 @@ API responses use `Cache-Control: no-store`. Defaults allow CORS only from `http
 
 ## Connect a trained model
 
-Replace `prediction/infrastructure/model/impl/UnavailablePredictionModel` with a `PredictionModel` implementation. Its `info()` must describe the exact preprocessing inputs and approved constraints; its `predict()` must apply the same preprocessing as training and return the version actually used. `PredictionServiceImpl` checks output units and finite values. Keep the demo profile separate. Agree feature schema, artifact, checksum, category encoding, units, preprocessing and numerical parity examples with Ali before enabling real inference.
+Connecting a trained model requires an implementation change and review, not just an environment setting. Add a `PredictionModel` provider with an explicit profile and mutually exclusive unavailable/demo selection. Its `info()` must describe the exact preprocessing inputs and artifact constraints; its `predict()` must apply the same preprocessing as training and return the version actually used. `PredictionServiceImpl` checks output units and finite values. Keep the demo profile separate. Agree feature schema, artifact, checksum, category encoding, units, preprocessing and numerical parity examples with Ali before enabling real inference.
+
+M2 estimates current systolic blood pressure; it is not a future forecast, diagnosis, treatment recommendation or replacement for measurement. The separate experimental M2 model has substantial high-SBP errors and no Kazakhstan clinical validation. A successful API response or numerical parity check does not establish clinical suitability.
 
 ## Structure and conventions
 
@@ -66,7 +122,7 @@ This follows the feature-based structure of `restaurant-service`, with service i
 
 M1/M2/M3 selection and time-series requests are not part of this initial frontend contract. No authentication or history endpoints are added.
 
-Contract source: [frontend API contract](https://github.com/bsanat/MedPredict/blob/main/docs/api-contract.md).
+Contract reference: [frontend API contract](https://github.com/MedPredicts/frontend/blob/main/docs/api-contract.md). Use the controllers and generated OpenAPI in this checkout to determine its actual supported fields and endpoints.
 
 
 ## Localized errors
